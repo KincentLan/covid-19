@@ -3,7 +3,7 @@ import { csv } from "d3-fetch";
 import { select } from "d3-selection";
 import {timeFormat, timeParse} from "d3-time-format";
 import { scaleTime, scaleLinear } from "d3-scale";
-import { extent } from "d3-array";
+import { extent, max } from "d3-array";
 import { axisBottom, axisLeft } from "d3-axis";
 import { line } from "d3-shape";
 
@@ -51,7 +51,7 @@ const Search = () => {
             .call(axisBottom(x).ticks(7).tickFormat(timeFormat("%m/%d")));
         // Add Y axis
         const y = scaleLinear()
-            .domain(extent(graphData, function(d) { return d.value;}))
+            .domain([0, Math.floor(max(graphData, d => d.value)/10) * 10 + 10])
             .range([ height + margin, 2 * margin ]);
         svg.append("g")
             .attr("class", "axis")
