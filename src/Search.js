@@ -18,7 +18,7 @@ const Search = () => {
     const [search, setSearch] = useState("");
 
     useEffect(() => {
-        csv('/colleges.csv').then(collegeArr => {
+        csv('https://raw.githubusercontent.com/KincentLan/covid-19/master/public/colleges.csv').then(collegeArr => {
             const names = [];
             collegeArr.forEach(function(row) {
                 names.push(row.college);
