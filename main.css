@@ -1,0 +1,15 @@
+#bar {
+    width: 100%;
+    height: 6vh;
+}
+
+#bar #title {
+    width: 18%;
+    height: 50%;
+    text-align: center;
+    white-space: nowrap;
+    padding-top: 3vh;
+    font-family: "Oswald", sans-serif;
+    font-weight: bold;
+    font-size: 1.35vw;
+}
