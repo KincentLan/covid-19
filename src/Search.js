@@ -1,11 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { csv } from "d3-fetch";
-import { select } from "d3-selection";
-import {timeFormat, timeParse} from "d3-time-format";
-import { scaleTime, scaleLinear } from "d3-scale";
-import { extent, max } from "d3-array";
-import { axisBottom, axisLeft } from "d3-axis";
-import { line } from "d3-shape";
+import Graph from "./Graph";
 
 const Search = () => {
     const [display, setDisplay] = useState(false);
@@ -18,7 +13,8 @@ const Search = () => {
     const [search, setSearch] = useState("");
 
     useEffect(() => {
-        csv('https://raw.githubusercontent.com/KincentLan/covid-19/master/public/colleges.csv').then(collegeArr => {
+        csv('https://raw.githubusercontent.com/KincentLan/covid-19/' +
+            'master/public/colleges.csv').then(collegeArr => {
             const names = [];
             collegeArr.forEach(function(row) {
                 names.push(row.college);
@@ -36,93 +32,6 @@ const Search = () => {
         });
     }, []);
 
-    function graph(width, height, margin, y_axis, x_axis, div, graphData, dates, title) {
-        const svg = select(div)
-            .append('svg')
-            .attr("viewBox", "0 0 500 500")
-            .append("g")
-
-
-        const x = scaleTime().domain(extent(graphData,
-            function(d) { return d.date;})).range([0, width]);
-        svg.append("g")
-            .attr("class", "axis")
-            .attr("transform", "translate(0," + (height + margin) + ")")
-            .call(axisBottom(x).ticks(7).tickFormat(timeFormat("%m/%d")));
-        // Add Y axis
-        const y = scaleLinear()
-            .domain([0, Math.floor(max(graphData, d => d.value)/10) * 10 + 10])
-            .range([ height + margin, 2 * margin ]);
-        svg.append("g")
-            .attr("class", "axis")
-            .call(axisLeft(y));
-        // Add the line
-        svg.append("path")
-            .datum(graphData)
-            .attr("fill", "none")
-            .attr("stroke", "#69b3a2")
-            .attr("stroke-width", 1.5)
-            .attr("d", line()
-                .x(function(d) { return x(d.date) })
-                .y(function(d) { return y(d.value) })
-            )
-        svg.append("text")
-            .attr("transform", "rotate(-90)")
-            .attr("y", -3.5 * margin)
-            .attr("x",-height/2)
-            .attr("dy", "1em")
-            .style("text-anchor", "middle")
-            .text(y_axis);
-        svg.append("text")
-            .attr("x", width / 2)
-            .attr("y", height + 3.5 * margin)
-            .style("text-anchor", "middle")
-            .text(x_axis);
-        svg.append("text")
-            .attr("x", width / 2)
-            .attr("y", margin)
-            .style("text-anchor", "middle")
-            .text(title);
-        // Add the points
-
-        svg
-            .append("g")
-            .selectAll("dot")
-            .data(graphData)
-            .enter()
-            .append("circle")
-            .attr("cx", function(d) { return x(d.date) } )
-            .attr("cy", function(d) { return y(d.value) } )
-            .attr("r", 5)
-            .attr("fill", "#69b3a2");
-
-    }
-
-    useEffect(() => {
-        if (collegeData != null && columns != null) {
-            const graphData = [];
-            const graphAvgData = [];
-            const dates = []
-            for (let i = columns.length - 7; i < columns.length; i++) {
-                const previousSeven = [];
-                for (let j = i-7; j < i; j++) {
-                    previousSeven.push(collegeData[columns[j]] - collegeData[columns[j-1]]);
-                }
-                const curAvg = previousSeven.reduce(function(total, num) {
-                    return total + num;})/previousSeven.length;
-                graphAvgData.push({date: timeParse("%m/%d/%Y")(columns[i] + "20"),
-                    value: curAvg});
-                dates.push(columns[i] + "20");
-                graphData.push({date: timeParse("%m/%d/%Y")(columns[i] + "20"),
-                    value: collegeData[columns[i]] - collegeData[columns[i-1]]})
-            }
-            graph(400, 400, 20, "New Cases",
-                "Date", "#daily_cases", graphData, dates, "Daily New Cases");
-            graph(400, 400, 20, "Average New Cases",
-                "Date", "#seven_day_avg", graphAvgData, dates, "7-Day Moving Average");
-        }
-    });
-
     function onChange(event) {
         setSearch(event.target.value);
         const college = colleges.find(s => s.college.toLowerCase() === event.target.value.toLowerCase());
@@ -134,6 +43,36 @@ const Search = () => {
         else {
             setDisplay(false);
         }
+    }
+
+    function sevenDayAvg() {
+        const collegeDataAvg = {};
+        for (let i = 11; i < columns.length; i++) {
+            const sevenCases = [];
+            for (let j = i - 7; j < i; j++) {
+                if (collegeData[columns[j]] - collegeData[columns[j-1]] < 0 || j === 4) {
+                    sevenCases.push(0);
+                }
+                else {
+                    sevenCases.push(collegeData[columns[j]] - collegeData[columns[j - 1]]);
+                }
+            }
+            collegeDataAvg[columns[i]] = sevenCases.reduce(function(a, b) {return a + b})/sevenCases.length;
+        }
+        return collegeDataAvg;
+    }
+
+    function dailyCases() {
+        const dailyCases = {};
+        for (let i = 4; i < columns.length; i++) {
+            if (i === 4) {
+                dailyCases[columns[i]] = collegeData[columns[i]];
+            }
+            else {
+                dailyCases[columns[i]] = collegeData[columns[i]] - collegeData[columns[i-1]];
+            }
+        }
+        return dailyCases;
     }
 
     return (
@@ -169,14 +108,11 @@ const Search = () => {
                    <h1>{curCollege.college}</h1>
                    <h2>{collegeData["County Name"] + ", " + curCollege.state}</h2>
                    <h3>New confirmed cases in {collegeData["County Name"]} as of {columns[columns.length-1]}: {
-                       collegeData[columns[columns.length-1]] - collegeData[columns[columns.length-2]]} confirmed cases</h3>
+                       collegeData[columns[columns.length-1]] - collegeData[columns[columns.length-2]]} confirmed cases
+                   </h3>
                    <div className="float-container">
-                       <div className="graph">
-                           <svg id="daily_cases"/>
-                       </div>
-                       <div className="graph">
-                           <svg id="seven_day_avg"/>
-                       </div>
+                        <Graph name="Daily New Cases" collegeData={dailyCases()} columns={columns}/>
+                        <Graph name="Seven-Day Moving Average" collegeData={sevenDayAvg()} columns={columns}/>
                    </div>
                </div>
             )}

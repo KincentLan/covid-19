@@ -62,16 +62,22 @@ const MapChart = ({setTooltipContent}) => {
                         {({geographies}) =>
                             geographies.map(geo => {
                                 const cur = data.find(s => s['countyFIPS'] === geo.id);
+                                let val = 0;
+                                if (cur != null) {
+                                    val = cur[col[col.length - 1]] - cur[col[col.length - 2]];
+                                    if (val < 0) {
+                                        val = 0;
+                                    }
+                                }
                                 return (
                                     <Geography id={geo.id}
                                                key={geo.rsmKey}
                                                geography={geo}
-                                               fill={cur ? colorScale(cur[col[col.length - 1]] - cur[col[col.length-2]]) : "#EEE"}
+                                               fill={cur ? colorScale(val) : "#EEE"}
                                                onMouseEnter={() => {
                                                    if (cur != null) {
-                                                       const cases = cur[col[col.length - 1]] - cur[col[col.length-2]];
                                                        setTooltipContent(cur["County Name"] + ", " + cur["State"]
-                                                                         + "<br/> New Cases: " + cases);
+                                                                         + "<br/> New Cases: " + val);
                                                    }
                                                }}
                                                onMouseLeave={() => {
