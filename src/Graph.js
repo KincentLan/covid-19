@@ -8,7 +8,7 @@ const Graph = (props) => {
         if (curElement < 0) {
             curElement = 0
         }
-        data.push({"date": props.columns[i], "Cases": Math.round(curElement)})
+        data.push({"date": props.columns[i], "Cases": Math.round(curElement * 100) / 100})
     }
     return (
         <div className="graph">

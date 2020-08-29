@@ -71,9 +71,8 @@ const MapChart = (props) => {
                                 let last_case = 0, last_death = 0;
                                 if (curCases !== void(0) && curDeaths !== void(0)) {
                                     last_case = curCases[columns[cases_date_idx]] - curCases[columns[cases_date_idx-1]];
-                                    last_death =
-                                        curDeaths[column_deaths[deaths_date_idx]]
-                                        - curDeaths[column_deaths[deaths_date_idx-1]];
+                                    last_death = curDeaths[column_deaths[deaths_date_idx]] -
+                                        curDeaths[column_deaths[deaths_date_idx-1]];
                                 }
                                 return (
                                     <Geography id={geo.id}

@@ -3,13 +3,15 @@ import { csv } from "d3-fetch";
 import Graph from "./Graph";
 
 const Search = (props) => {
+    const deaths = props.deaths;
+    const cases = props.cases;
+    const columns = props.columns;
     const [display, setDisplay] = useState(false);
     const [options, setOptions] = useState([]);
     const [colleges, setColleges] = useState([]);
     const [curCollege, setCurCollege] = useState("");
-    const [collegeData, setColData] = useState([]);
-    const [data, setData] = useState([]);
-    const [columns, setColumns] = useState([]);
+    const [collegeCases, setCollegeCases] = useState([]);
+    const [collegeDeaths, setCollegeDeaths] = useState([]);
     const [search, setSearch] = useState("");
 
     useEffect(() => {
@@ -24,20 +26,13 @@ const Search = (props) => {
         })
     }, [])
 
-    useEffect(() => {
-        csv("https://usafactsstatic.blob.core.windows.net/public/data/" +
-            "covid-19/covid_confirmed_usafacts.csv").then(counties => {
-            setData(counties);
-            setColumns(counties.columns);
-        });
-    }, []);
-
     function onChange(event) {
         setSearch(event.target.value);
         const college = colleges.find(s => s.college.toLowerCase() === event.target.value.toLowerCase());
         if (college != null) {
             setCurCollege(college);
-            setColData(data.find(s => s.countyFIPS === college.countyFIPS));
+            setCollegeCases(cases.find(s => parseInt(s.countyFIPS) === parseInt(college.countyFIPS)));
+            setCollegeDeaths(deaths.find(s => parseInt(s.countyFIPS) === parseInt(college.countyFIPS)));
             setDisplay(true);
         }
         else {
@@ -45,16 +40,16 @@ const Search = (props) => {
         }
     }
 
-    function sevenDayAvg() {
+    function sevenDayDailyAvg(arr) {
         const collegeDataAvg = {};
         for (let i = 11; i < columns.length; i++) {
             const sevenCases = [];
             for (let j = i - 7; j < i; j++) {
-                if (collegeData[columns[j]] - collegeData[columns[j-1]] < 0 || j === 4) {
+                if (arr[columns[j]] - arr[columns[j-1]] < 0 || j === 4) {
                     sevenCases.push(0);
                 }
                 else {
-                    sevenCases.push(collegeData[columns[j]] - collegeData[columns[j - 1]]);
+                    sevenCases.push(arr[columns[j]] - arr[columns[j - 1]]);
                 }
             }
             collegeDataAvg[columns[i]] = sevenCases.reduce(function(a, b) {return a + b})/sevenCases.length;
@@ -62,14 +57,14 @@ const Search = (props) => {
         return collegeDataAvg;
     }
 
-    function dailyCases() {
+    function dailyCases(arr) {
         const dailyCases = {};
         for (let i = 4; i < columns.length; i++) {
             if (i === 4) {
-                dailyCases[columns[i]] = collegeData[columns[i]];
+                dailyCases[columns[i]] = arr[columns[i]];
             }
             else {
-                dailyCases[columns[i]] = collegeData[columns[i]] - collegeData[columns[i-1]];
+                dailyCases[columns[i]] = arr[columns[i]] - arr[columns[i-1]];
             }
         }
         return dailyCases;
@@ -106,13 +101,21 @@ const Search = (props) => {
             {display && (
                 <div className="college">
                     <h1>{curCollege.college}</h1>
-                    <h2>{collegeData["County Name"] + ", " + curCollege.state}</h2>
-                    <h3>New confirmed cases in {collegeData["County Name"]} as of {columns[columns.length-1]}: {
-                        collegeData[columns[columns.length-1]] - collegeData[columns[columns.length-2]]} confirmed cases
+                    <h2>{collegeCases["County Name"] + ", " + curCollege.state}</h2>
+                    <h3>New confirmed cases in {collegeCases["County Name"]} as of {columns[columns.length-1]}: {
+                        collegeCases[columns[columns.length-1]] - collegeCases[columns[columns.length-2]]} confirmed cases
                     </h3>
                     <div className="float-container">
-                        <Graph name="Daily New Cases" collegeData={dailyCases()} columns={columns}/>
-                        <Graph name="Seven-Day Moving Average" collegeData={sevenDayAvg()} columns={columns}/>
+                        <Graph name="Daily New Cases" collegeData={dailyCases(collegeCases)} columns={columns}/>
+                        <Graph name="Seven-Day Moving Average (New Cases)" collegeData={sevenDayDailyAvg(collegeCases)} columns={columns}/>
+                    </div>
+                    <div className="float-container">
+                        <Graph name="Daily New Deaths" collegeData={dailyCases(collegeDeaths)} columns={columns}/>
+                        <Graph name="Seven-Day Moving Average (New Deaths)" collegeData={sevenDayDailyAvg(collegeDeaths)} columns={columns}/>
+                    </div>
+                    <div className="float-container">
+                        <Graph name="Cumulative Cases" collegeData={collegeCases} columns={columns}/>
+                        <Graph name="Cumulative Deaths" collegeData={collegeDeaths} columns={columns}/>
                     </div>
                 </div>
             )}
