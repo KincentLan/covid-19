@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { csv } from "d3-fetch";
 import Graph from "./Graph";
 
-const Search = () => {
+const Search = (props) => {
     const [display, setDisplay] = useState(false);
     const [options, setOptions] = useState([]);
     const [colleges, setColleges] = useState([]);
@@ -101,20 +101,20 @@ const Search = () => {
                             </option>
                         );
                     })
-                    }
+                }
             </datalist>
             {display && (
-               <div className="college">
-                   <h1>{curCollege.college}</h1>
-                   <h2>{collegeData["County Name"] + ", " + curCollege.state}</h2>
-                   <h3>New confirmed cases in {collegeData["County Name"]} as of {columns[columns.length-1]}: {
-                       collegeData[columns[columns.length-1]] - collegeData[columns[columns.length-2]]} confirmed cases
-                   </h3>
-                   <div className="float-container">
+                <div className="college">
+                    <h1>{curCollege.college}</h1>
+                    <h2>{collegeData["County Name"] + ", " + curCollege.state}</h2>
+                    <h3>New confirmed cases in {collegeData["County Name"]} as of {columns[columns.length-1]}: {
+                        collegeData[columns[columns.length-1]] - collegeData[columns[columns.length-2]]} confirmed cases
+                    </h3>
+                    <div className="float-container">
                         <Graph name="Daily New Cases" collegeData={dailyCases()} columns={columns}/>
                         <Graph name="Seven-Day Moving Average" collegeData={sevenDayAvg()} columns={columns}/>
-                   </div>
-               </div>
+                    </div>
+                </div>
             )}
         </div>
     );

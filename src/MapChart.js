@@ -1,28 +1,33 @@
-import React, {useState, useEffect, memo} from "react";
+import React, { memo } from "react";
 import {ZoomableGroup, ComposableMap, Geographies, Geography} from "react-simple-maps";
 import {scaleThreshold} from "d3-scale";
-import {csv} from "d3-fetch";
 
-const geoUrl = "https://cdn.jsdelivr.net/npm/us-atlas@3/counties-10m.json";
+const geoUrl_counties = "https://cdn.jsdelivr.net/npm/us-atlas@3/counties-10m.json";
 const geoUrl_states = "https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json";
 
-const MapChart = ({setTooltipContent}) => {
-    const [data, setData] = useState([]);
-    const [col, setCol] = useState([]);
+function filterNegative(x) {
+    if (x < 0) {
+        return 0;
+    }
+    return x;
+}
+const MapChart = (props) => {
+    const cases = props.cases.map(x => filterNegative(x));
+    const deaths = props.deaths.map(x => filterNegative(x));
+    const columns = props.columns;
+    const column_deaths = props.column_deaths
+    const cases_date_idx = columns.length - 1;
+    const deaths_date_idx = props.column_deaths.length - 1;
 
-    useEffect(() => {
-        csv("https://usafactsstatic.blob.core.windows.net/public/data/" +
-            "covid-19/covid_confirmed_usafacts.csv").then(counties => {
-            setData(counties);
-            setCol(counties.columns)
-        });
-    }, []);
-
-    for (let i = 0; i < data.length; i++) {
-        if (data[i]['countyFIPS'].length === 4) {
-            data[i]['countyFIPS'] = "0" + data[i]['countyFIPS'];
+    for (let i = 0; i < cases.length; i++) {
+        if (cases[i]['countyFIPS'].length === 4) {
+            cases[i]['countyFIPS'] = "0" + cases[i]['countyFIPS'];
+        }
+        if (i < deaths.length && deaths[i]['countyFIPS'].length === 4) {
+            deaths[i]['countyFIPS'] = "0" + deaths[i]['countyFIPS'];
         }
     }
+
 
     const colorScale = scaleThreshold()
         .domain([0, 5, 10, 50, 100, 500, 1000, 5000, Number.MAX_SAFE_INTEGER])
@@ -58,30 +63,33 @@ const MapChart = ({setTooltipContent}) => {
                             </>
                         )}
                     </Geographies>
-                    <Geographies geography={geoUrl}>
+                    <Geographies geography={geoUrl_counties}>
                         {({geographies}) =>
                             geographies.map(geo => {
-                                const cur = data.find(s => s['countyFIPS'] === geo.id);
-                                let val = 0;
-                                if (cur != null) {
-                                    val = cur[col[col.length - 1]] - cur[col[col.length - 2]];
-                                    if (val < 0) {
-                                        val = 0;
-                                    }
+                                const curCases = cases.find(s => s['countyFIPS'] === geo.id);
+                                const curDeaths = deaths.find(s => s['countyFIPS'] === geo.id);
+                                let last_case = 0, last_death = 0;
+                                if (curCases !== void(0) && curDeaths !== void(0)) {
+                                    last_case = curCases[columns[cases_date_idx]] - curCases[columns[cases_date_idx-1]];
+                                    last_death =
+                                        curDeaths[column_deaths[deaths_date_idx]]
+                                        - curDeaths[column_deaths[deaths_date_idx-1]];
                                 }
                                 return (
                                     <Geography id={geo.id}
                                                key={geo.rsmKey}
                                                geography={geo}
-                                               fill={cur ? colorScale(val) : "#EEE"}
+                                               fill={curCases ? colorScale(last_case) : "#EEE"}
                                                onMouseEnter={() => {
-                                                   if (cur != null) {
-                                                       setTooltipContent(cur["County Name"] + ", " + cur["State"]
-                                                                         + "<br/> New Cases: " + val);
+                                                   if (curCases !== void(0)) {
+                                                       props.setTooltipContent(
+                                                           curCases["County Name"] + ", " + curCases["State"]
+                                                           + "<br/> New Cases: " + last_case
+                                                           + "<br/> New Deaths: " + last_death);
                                                    }
                                                }}
                                                onMouseLeave={() => {
-                                                   setTooltipContent("");
+                                                   props.setTooltipContent("");
                                                }}
                                                style={{
                                                    hover: {
@@ -103,7 +111,7 @@ const MapChart = ({setTooltipContent}) => {
             <div className="info">
                 Retrieved from <a href="https://usafacts.org/visualizations/coronavirus-covid-19-spread-map/">
                 usafacts.org</a> <br/>
-                New confirmed cases as of: {col[col.length-1]}
+                New confirmed cases as of: {columns[cases_date_idx]}
             </div>
         </div>
     );
